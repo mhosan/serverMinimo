@@ -2,20 +2,32 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const cors = require('cors');
+
+// Load environment variables based on NODE_ENV
+const dotenv = require('dotenv');
+const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
+dotenv.config({ path: envFile });
+
 const app = express();
-const port = process.env.PORT || 4000
+const port = process.env.PORT || 4000;
+
+// Server URL is now taken directly from environment variables
+const serverUrl = process.env.NODE_ENV === 'production'
+    ? process.env.SERVER_URL
+    : `http://localhost:${port}`;
 
 const swaggerOptions = {
     swaggerDefinition: {
         openapi: '3.0.0',
         info: {
-            title: 'API Documentación',
+            title: 'MHosan server mínimo API Documentación',
             version: '1.0.0',
-            description: 'Documentación de la API usando Swagger',
+            description: 'Documentación de la API',
         },
         servers: [
             {
-                url: `http://localhost:${port}`,
+                url: serverUrl,
+                description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server'
             },
         ],
     },
