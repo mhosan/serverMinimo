@@ -1,4 +1,5 @@
 const express = require('express');
+const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const cors = require('cors');
@@ -10,6 +11,9 @@ dotenv.config({ path: envFile });
 
 const app = express();
 const port = process.env.PORT || 4000;
+
+// Configurar morgan primero para registrar todas las solicitudes
+app.use(morgan('dev'));
 
 // Server URL is now taken directly from environment variables
 const serverUrl = process.env.NODE_ENV === 'production'
