@@ -12,6 +12,11 @@ router.get('/json', controller.getJson);
 // POST /
 router.post('/', controller.postText);
 
+
+// POST /
+router.post('/chat', controller.postChat);
+
+
 // PUT /
 router.put('/', controller.putWelcome);
 
