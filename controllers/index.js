@@ -33,13 +33,20 @@ const postChat = async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        //"model": body.model || "microsoft/phi-4-reasoning-plus:free",
-        "model": body.model || "deepseek/deepseek-chat-v3-0324:free",
+        "model": body.model || "mistralai/mistral-7b-instruct:free", //117M tokens baja latencia
+        //"model": body.model || "mistralai/mistral-nemo:free", //1.59B tokens
+        //"model": body.model || "microsoft/mai-ds-r1:free", //2.73B tokens
+        //"model": body.model || "meta-llama/llama-4-maverick:free", //10.6B tokens
+        //"model": body.model || "google/gemini-2.0-flash-exp:free", //27.7B tokens
+        //"model": body.model || "microsoft/phi-4-reasoning-plus:free", //222M tokens
+        //"model": body.model || "deepseek/deepseek-chat-v3-0324:free", //99B tokens
         "messages": body.messages || [
           { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" },
-          { role: 'assistant', content: "No esto seguro, pero mi mejor suposición es" },
+          //{ role: 'assistant', content: "No esto seguro, pero mi mejor suposición es" },
         ],
-        'provider': body.provider || { 'sort': 'latency' }
+        'provider': body.provider || { 'sort': 'latency' },
+        //max_tokens: 100 //maximo de tokens a devolver
+        //temperature: 0.7, //controla la aleatoriedad de la respuesta
       })
     });
     //parametros de provider
