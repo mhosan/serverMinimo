@@ -20,7 +20,6 @@ exports.postText = (req, res) => {
 };
 
 
-
 // POST /chat
 const postChat = async (req, res) => {
   const body = req.body || {};
