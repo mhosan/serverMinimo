@@ -54,12 +54,16 @@ const postChat = async (req, res) => {
     //price prioriza el costo mas bajo
     //latency prioriza la latencia mas baja: veloc. resp. mas rapida
     const data = await response.json();
+    const usedModel = body.model || "mistralai/mistral-7b-instruct:free";
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-      const pretty = JSON.stringify({ message: data.choices[0].message.content }, null, 2);
+      const pretty = JSON.stringify({
+        message: data.choices[0].message.content,
+        model: usedModel
+      }, null, 2);
       res.setHeader('Content-Type', 'application/json');
       res.send(pretty);
     } else {
-      res.status(500).json({ error: 'No message content found', data });
+      res.status(500).json({ error: 'No message content found', data, model: usedModel });
     }
   } catch (error) {
     res.status(500).json({ error: error.message });
