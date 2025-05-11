@@ -39,10 +39,13 @@ const postChat = async (req, res) => {
           { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" },
           { role: 'assistant', content: "No esto seguro, pero mi mejor suposición es" },
         ],
-        'provider': body.provider || { 'sort': 'throughput' }
+        'provider': body.provider || { 'sort': 'latency' }
       })
     });
-
+    //parametros de provider
+    //throughput permite procesar mas solicit. x seg
+    //price prioriza el costo mas bajo
+    //latency prioriza la latencia mas baja: veloc. resp. mas rapida
     const data = await response.json();
     if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
       const pretty = JSON.stringify({ message: data.choices[0].message.content }, null, 2);
