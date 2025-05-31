@@ -16,6 +16,9 @@ router.post('/', controller.postText);
 // POST /
 router.post('/chat', controller.postChat);
 
+// POST /weather
+router.post('/weather', controller.postWeather);
+
 
 // PUT /
 router.put('/', controller.putWelcome);

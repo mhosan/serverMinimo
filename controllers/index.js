@@ -73,6 +73,70 @@ exports.postChat = postChat;
 // POST /chat
 
 
+// POST /weather
+const postWeather = async (req, res) => {
+  const { city } = req.body;
+  if (!city) {
+    return res.status(400).json({ error: 'City is required in the request body.' });
+  }
+  try {
+    const mcpResponse = await fetch('https://mcpserver-hazel.vercel.app/api', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json, text/event-stream',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'tools/call',
+        params: {
+          name: 'pronostico',
+          arguments: { city }
+        },
+        id: 1
+      })
+    });
+    const text = await mcpResponse.text();
+    // Intenta extraer el JSON válido de la respuesta tipo event-stream
+    let data;
+    try {
+      // Busca la línea que contiene 'data:' y extrae el JSON
+      const match = text.match(/data: (\{.*\})/);
+      if (match && match[1]) {
+        data = JSON.parse(match[1]);
+      } else {
+        throw new Error('No se encontró JSON válido en la respuesta del MCP');
+      }
+    } catch (err) {
+      return res.status(500).json({ error: 'Error al parsear la respuesta del MCP', details: err.message, raw: text });
+    }
+    res.setHeader('Content-Type', 'application/json');
+    // Si el MCP devuelve un objeto con 'result.content', lo ponemos directo en result.content
+    let result = { model: 'mcpserver-hazel/pronostico' };
+    if (data && typeof data === 'object') {
+      if (data.result && typeof data.result === 'object' && data.result.content) {
+        result.content = data.result.content;
+      } else if (data.content) {
+        result.content = data.content;
+      } else {
+        result.data = data;
+      }
+    } else {
+      result.data = data;
+    }
+    res.send(JSON.stringify({
+      jsonrpc: '2.0',
+      result,
+      id: 1
+    }, null, 2));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+exports.postWeather = postWeather;
+// POST /weather
+
+
 // PUT /
 exports.putWelcome = (req, res) => {
     res.send('Hola, soy un put');
