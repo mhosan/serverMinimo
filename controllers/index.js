@@ -73,13 +73,34 @@ exports.postChat = postChat;
 // POST /chat
 
 
+// Función auxiliar para enviar mensajes al LLM (OpenRouter)
+async function sendToLLM(messages, model = "mistralai/mistral-7b-instruct:free", provider = { sort: 'latency' }) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${process.env.AUTHORIZATION_BEARER}`,
+      "HTTP-Referer": "https://mhtest.alwaysdata.net/#/",
+      "X-Title": "Mhosan",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      provider
+    })
+  });
+  return response.json();
+}
+
 // POST /weather
 const postWeather = async (req, res) => {
+  
   const { city } = req.body;
   if (!city) {
     return res.status(400).json({ error: 'City is required in the request body.' });
   }
   try {
+    // 1. Llamar al MCP
     const mcpResponse = await fetch('https://mcpserver-hazel.vercel.app/api', {
       method: 'POST',
       headers: {
@@ -97,33 +118,88 @@ const postWeather = async (req, res) => {
       })
     });
     const text = await mcpResponse.text();
-    // Intenta extraer el JSON válido de la respuesta tipo event-stream
-    let data;
+    // Parsear la respuesta y extraer el texto meteorológico
+    let datosMeteorologicos = '';
     try {
-      // Busca la línea que contiene 'data:' y extrae el JSON
-      const match = text.match(/data: (\{.*\})/);
-      if (match && match[1]) {
-        data = JSON.parse(match[1]);
+      const dataLines = text.split('\n').filter(line => line.startsWith('data: '));
+      if (dataLines.length > 0) {
+        const lastData = dataLines[dataLines.length - 1].replace('data: ', '');
+        const data = JSON.parse(lastData);
+        // Buscar la propiedad text en la estructura result.content[0].text
+        if (
+          data.result &&
+          data.result.content &&
+          Array.isArray(data.result.content) &&
+          data.result.content[0] &&
+          data.result.content[0].text &&
+          typeof data.result.content[0].text === 'object'
+        ) {
+          // Convertir el objeto text a string legible
+          datosMeteorologicos = JSON.stringify(data.result.content[0].text, null, 2);
+        } else {
+          datosMeteorologicos = '[No se encontró la propiedad text en la respuesta del MCP]';
+        }
       } else {
-        throw new Error('No se encontró JSON válido en la respuesta del MCP');
+        datosMeteorologicos = '[No se encontró línea con data: en la respuesta del MCP]';
+      }
+    } catch (err) {
+      datosMeteorologicos = '[Error al parsear la respuesta del MCP: ' + err.message + ']';
+    }
+    //console.log('Datos meteorológicos extraídos:', datosMeteorologicos);
+    // Buscar todas las líneas con 'data:' y tomar la última
+    let pronostico = '';
+    try {
+      const dataLines = text.split('\n').filter(line => line.startsWith('data: '));
+      if (dataLines.length > 0) {
+        const lastData = dataLines[dataLines.length - 1].replace('data: ', '');
+        const data = JSON.parse(lastData);
+        // Extraer el texto del pronóstico si está en data.result.content[0].text
+        if (data.result && data.result.content && Array.isArray(data.result.content) && data.result.content[0].text) {
+          pronostico = data.result.content[0].text;
+        } else if (data.result && data.result.content && typeof data.result.content === 'string') {
+          pronostico = data.result.content;
+        } else if (data.content && typeof data.content === 'string') {
+          pronostico = data.content;
+        } else if (data.content && typeof data.content === 'object') {
+          // Extraer campos meteorológicos relevantes si existen
+          const campos = data.content;
+          let frase = '';
+          if (campos.ciudad) frase += `En ${campos.ciudad}, `;
+          if (campos.temperatura) frase += `la temperatura es de ${campos.temperatura}, `;
+          if (campos.humedad) frase += `la humedad es de ${campos.humedad}, `;
+          if (campos.presion) frase += `la presión es de ${campos.presion}, `;
+          if (campos.viento) frase += `el viento es de ${campos.viento}, `;
+          if (campos.nubosidad) frase += `la nubosidad es de ${campos.nubosidad}, `;
+          pronostico = frase.trim().replace(/, $/, '.');
+          if (!pronostico) pronostico = Object.values(campos).join(', ');
+        } else {
+          pronostico = JSON.stringify(data);
+        }
+      } else {
+        throw new Error('No se encontró línea con data: en la respuesta del MCP');
       }
     } catch (err) {
       return res.status(500).json({ error: 'Error al parsear la respuesta del MCP', details: err.message, raw: text });
     }
-    res.setHeader('Content-Type', 'application/json');
-    // Si el MCP devuelve un objeto con 'result.content', lo ponemos directo en result.content
-    let result = { model: 'mcpserver-hazel/pronostico' };
-    if (data && typeof data === 'object') {
-      if (data.result && typeof data.result === 'object' && data.result.content) {
-        result.content = data.result.content;
-      } else if (data.content) {
-        result.content = data.content;
-      } else {
-        result.data = data;
-      }
+    // 3. Armar el mensaje para el LLM usando el string de datos meteorológicos extraídos
+    const messages = [
+      { role: "user", content: `Dame un resumen del pronóstico del tiempo de ${city} con estos datos: ${datosMeteorologicos}` }
+    ];
+    // 4. Usar el mismo modelo que postChat
+    const model = req.body.model || "mistralai/mistral-7b-instruct:free";
+    const provider = req.body.provider || { sort: 'latency' };
+    
+    // 5. Llamar al LLM
+    const llmData = await sendToLLM(messages, model, provider);
+    
+    // 6. Responder al cliente
+    let result = { model: model };
+    if (llmData.choices && llmData.choices[0] && llmData.choices[0].message && llmData.choices[0].message.content) {
+      result.content = llmData.choices[0].message.content;
     } else {
-      result.data = data;
+      result.data = llmData;
     }
+    res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({
       jsonrpc: '2.0',
       result,
