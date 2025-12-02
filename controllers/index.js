@@ -1,22 +1,22 @@
 // Reemplazo de import ESM por función compatible con require/CommonJS
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 // controllers/index.js
 
 // GET /
 exports.getWelcome = (req, res) => {
-    res.send('Hola soy un get');
+  res.send('Hola soy un get');
 };
 
 // GET /json
 exports.getJson = (req, res) => {
-    res.json({ mensaje: 'Hola soy un get en formato JSON', tipo: 'JSON' });
+  res.json({ mensaje: 'Hola soy un get en formato JSON', tipo: 'JSON' });
 };
 
 // POST /
 exports.postText = (req, res) => {
-    const { texto } = req.body;
-    res.send(texto);
+  const { texto } = req.body;
+  res.send(texto);
 };
 
 
@@ -95,7 +95,7 @@ async function sendToLLM(messages, model = "mistralai/mistral-7b-instruct:free",
 
 // POST /weather
 const postWeather = async (req, res) => {
-  
+
   const { city } = req.body;
   if (!city) {
     return res.status(400).json({ error: 'City is required in the request body.' });
@@ -146,7 +146,7 @@ const postWeather = async (req, res) => {
     } catch (err) {
       datosMeteorologicos = '[Error al parsear la respuesta del MCP: ' + err.message + ']';
     }
-    //console.log('Datos meteorológicos extraídos:', datosMeteorologicos);
+    console.log('Datos meteorológicos extraídos:', datosMeteorologicos);
     // Buscar todas las líneas con 'data:' y tomar la última
     let pronostico = '';
     try {
@@ -189,10 +189,11 @@ const postWeather = async (req, res) => {
     // 4. Usar el mismo modelo que postChat
     const model = req.body.model || "mistralai/mistral-7b-instruct:free";
     const provider = req.body.provider || { sort: 'latency' };
-    
+
     // 5. Llamar al LLM
     const llmData = await sendToLLM(messages, model, provider);
-    
+    console.log('Respuesta del LLM:', JSON.stringify(llmData, null, 2));
+
     // 6. Responder al cliente
     let result = { model: model };
     if (llmData.choices && llmData.choices[0] && llmData.choices[0].message && llmData.choices[0].message.content) {
@@ -216,10 +217,10 @@ exports.postWeather = postWeather;
 
 // PUT /
 exports.putWelcome = (req, res) => {
-    res.send('Hola, soy un put');
+  res.send('Hola, soy un put');
 };
 
 // DELETE /
 exports.deleteWelcome = (req, res) => {
-    res.send('Hola soy un delete');
+  res.send('Hola soy un delete');
 };
