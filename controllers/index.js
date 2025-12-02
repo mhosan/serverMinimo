@@ -46,7 +46,7 @@ const postChat = async (req, res) => {
         ],
         'provider': body.provider || { 'sort': 'latency' },
         //max_tokens: 100 //maximo de tokens a devolver
-        //temperature: 0.7, //controla la aleatoriedad de la respuesta
+        //temperature: 0.7, //controla la aleatoriedad de la respuesta 
       })
     });
     //parametros de provider
@@ -91,6 +91,7 @@ async function sendToLLM(messages, model = "mistralai/mistral-7b-instruct:free",
   });
   return response.json();
 }
+
 
 // POST /weather
 const postWeather = async (req, res) => {
