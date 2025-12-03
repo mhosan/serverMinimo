@@ -24,6 +24,19 @@ exports.postText = (req, res) => {
 const postChat = async (req, res) => {
   const body = req.body || {};
   try {
+    const requestBody = {
+      "model": body.model || "google/gemini-2.0-flash-exp:free",
+      "messages": body.messages || [
+        { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" }
+      ],
+      'provider': body.provider || { 'sort': 'latency' }
+    };
+    
+    console.log('=== POST /chat ===');
+    console.log('Authorization Bearer:', process.env.AUTHORIZATION_BEARER ? 'Presente' : 'FALTA');
+    console.log('Modelo a usar:', requestBody.model);
+    console.log('Payload enviado a OpenRouter:', JSON.stringify(requestBody, null, 2));
+    
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -32,39 +45,47 @@ const postChat = async (req, res) => {
         "X-Title": "Mhosan",
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        "model": body.model || "mistralai/mistral-7b-instruct:free", //117M tokens baja latencia
-        //"model": body.model || "mistralai/mistral-nemo:free", //1.59B tokens
-        //"model": body.model || "microsoft/mai-ds-r1:free", //2.73B tokens
-        //"model": body.model || "meta-llama/llama-4-maverick:free", //10.6B tokens
-        //"model": body.model || "google/gemini-2.0-flash-exp:free", //27.7B tokens
-        //"model": body.model || "microsoft/phi-4-reasoning-plus:free", //222M tokens
-        //"model": body.model || "deepseek/deepseek-chat-v3-0324:free", //99B tokens
-        "messages": body.messages || [
-          { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" },
-          //{ role: 'assistant', content: "No esto seguro, pero mi mejor suposición es" },
-        ],
-        'provider': body.provider || { 'sort': 'latency' },
-        //max_tokens: 100 //maximo de tokens a devolver
-        //temperature: 0.7, //controla la aleatoriedad de la respuesta 
-      })
+      body: JSON.stringify(requestBody)
     });
-    //parametros de provider
-    //throughput permite procesar mas solicit. x seg
-    //price prioriza el costo mas bajo
-    //latency prioriza la latencia mas baja: veloc. resp. mas rapida
+    
+    console.log('Status HTTP de OpenRouter:', response.status);
+    console.log('Headers de respuesta:', {
+      'content-type': response.headers.get('content-type'),
+      'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
+    });
+    
     const data = await response.json();
+    console.log('Respuesta completa de OpenRouter:', JSON.stringify(data, null, 2));
     const usedModel = body.model || "mistralai/mistral-7b-instruct:free";
-    if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-      const pretty = JSON.stringify({
-        message: data.choices[0].message.content,
-        model: usedModel
-      }, null, 2);
-      res.setHeader('Content-Type', 'application/json');
-      res.send(pretty);
-    } else {
-      res.status(500).json({ error: 'No message content found', data, model: usedModel });
+    
+    // Validar que la respuesta sea válida
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Error: Estructura de respuesta inválida', data);
+      return res.status(500).json({ 
+        error: 'Respuesta de OpenRouter con estructura inválida', 
+        data, 
+        model: usedModel 
+      });
     }
+    
+    const content = data.choices[0].message.content;
+    
+    // Validar que el contenido no esté vacío
+    if (!content || content.trim() === '') {
+      console.error('Error: Content vacío en la respuesta de OpenRouter');
+      return res.status(500).json({ 
+        error: 'OpenRouter devolvió un contenido vacío', 
+        fullResponse: data,
+        model: usedModel 
+      });
+    }
+    
+    const pretty = JSON.stringify({
+      message: content,
+      model: usedModel
+    }, null, 2);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(pretty);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -73,23 +94,71 @@ exports.postChat = postChat;
 // POST /chat
 
 
-// Función auxiliar para enviar mensajes al LLM (OpenRouter)
-async function sendToLLM(messages, model = "mistralai/mistral-7b-instruct:free", provider = { sort: 'latency' }) {
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.AUTHORIZATION_BEARER}`,
-      "HTTP-Referer": "https://mhtest.alwaysdata.net/#/",
-      "X-Title": "Mhosan",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      provider
-    })
-  });
-  return response.json();
+// Función auxiliar para enviar mensajes al LLM (OpenRouter) con fallback automático
+async function sendToLLM(messages, model = "google/gemini-2.0-flash-exp:free", provider = { sort: 'latency' }) {
+  // Lista de modelos de fallback que REALMENTE existen en OpenRouter
+  const modelos = [
+    model, // Intentar primero con el modelo solicitado
+    "google/gemini-2.0-flash-exp:free",
+    "openai/gpt-4o-mini",
+    "anthropic/claude-3.5-sonnet",
+    "mistralai/mistral-7b-instruct:free"
+  ];
+  
+  // Remover duplicados
+  const modelosUnicos = [...new Set(modelos)];
+  
+  for (const modeloActual of modelosUnicos) {
+    try {
+      console.log(`\n[sendToLLM] Intentando con modelo: ${modeloActual}`);
+      
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.AUTHORIZATION_BEARER}`,
+          "HTTP-Referer": "https://mhtest.alwaysdata.net/#/",
+          "X-Title": "Mhosan",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: modeloActual,
+          messages,
+          provider
+        })
+      });
+      
+      console.log(`[sendToLLM] Status HTTP: ${response.status}`);
+      
+      const data = await response.json();
+      
+      // Verificar si hay error de rate limit o estructura
+      if (data.error) {
+        console.log(`[sendToLLM] ❌ Error con ${modeloActual}:`, data.error.message || data.error.code);
+        console.log(`[sendToLLM] Detalles:`, JSON.stringify(data.error, null, 2));
+        continue; // Intentar siguiente modelo
+      }
+      
+      // Verificar si la respuesta tiene contenido válido
+      if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+        const content = data.choices[0].message.content.trim();
+        
+        if (content && content !== '' && content !== ' ') {
+          console.log(`[sendToLLM] ✓ Modelo ${modeloActual} respondió correctamente`);
+          console.log(`[sendToLLM] Contenido: ${content.substring(0, 100)}...`);
+          return data;
+        }
+      }
+      
+      console.log(`[sendToLLM] ⚠ Contenido vacío con ${modeloActual}, intentando siguiente...`);
+      
+    } catch (err) {
+      console.log(`[sendToLLM] 🔴 Error de red con ${modeloActual}:`, err.message);
+    }
+  }
+  
+  // Si llegamos aquí, ningún modelo funcionó
+  console.error('[sendToLLM] ❌ Todos los modelos fallaron');
+  throw new Error('Ningún modelo LLM disponible funcionó correctamente');
 }
 
 
@@ -118,35 +187,60 @@ const postWeather = async (req, res) => {
         id: 1
       })
     });
+    
     const text = await mcpResponse.text();
+    console.log('[MCP] Respuesta cruda (primeros 500 caracteres):', text.substring(0, 500));
+    
     // Parsear la respuesta y extraer el texto meteorológico
     let datosMeteorologicos = '';
     try {
       const dataLines = text.split('\n').filter(line => line.startsWith('data: '));
+      console.log('[MCP] Líneas con "data:":', dataLines.length);
+      
       if (dataLines.length > 0) {
         const lastData = dataLines[dataLines.length - 1].replace('data: ', '');
         const data = JSON.parse(lastData);
+        console.log('[MCP] Estructura parsed:', JSON.stringify(data, null, 2).substring(0, 300));
+        
         // Buscar la propiedad text en la estructura result.content[0].text
         if (
           data.result &&
           data.result.content &&
           Array.isArray(data.result.content) &&
           data.result.content[0] &&
-          data.result.content[0].text &&
-          typeof data.result.content[0].text === 'object'
+          data.result.content[0].text
         ) {
-          // Convertir el objeto text a string legible
-          datosMeteorologicos = JSON.stringify(data.result.content[0].text, null, 2);
+          // El text puede ser un string o un objeto
+          let textContent = data.result.content[0].text;
+          
+          // Si es un string que parece JSON, parsearlo
+          if (typeof textContent === 'string') {
+            try {
+              textContent = JSON.parse(textContent);
+              console.log('[MCP] ✓ Text parseado como JSON');
+            } catch (e) {
+              console.log('[MCP] Text es un string (no JSON)');
+            }
+          }
+          
+          // Convertir a string legible
+          datosMeteorologicos = typeof textContent === 'string' 
+            ? textContent 
+            : JSON.stringify(textContent, null, 2);
+          console.log('[MCP] ✓ Datos meteorológicos extraídos correctamente');
         } else {
           datosMeteorologicos = '[No se encontró la propiedad text en la respuesta del MCP]';
+          console.log('[MCP] ❌ Estructura no contiene result.content[0].text');
         }
       } else {
         datosMeteorologicos = '[No se encontró línea con data: en la respuesta del MCP]';
+        console.log('[MCP] ❌ No se encontraron líneas con "data:"');
       }
     } catch (err) {
       datosMeteorologicos = '[Error al parsear la respuesta del MCP: ' + err.message + ']';
+      console.log('[MCP] ❌ Error al parsear:', err.message);
     }
-    console.log('Datos meteorológicos extraídos:', datosMeteorologicos);
+    console.log('Datos meteorológicos extraídos:', datosMeteorologicos.substring(0, 200));
     // Buscar todas las líneas con 'data:' y tomar la última
     let pronostico = '';
     try {
@@ -187,20 +281,43 @@ const postWeather = async (req, res) => {
       { role: "user", content: `Dame un resumen del pronóstico del tiempo de ${city} con estos datos: ${datosMeteorologicos}` }
     ];
     // 4. Usar el mismo modelo que postChat
-    const model = req.body.model || "mistralai/mistral-7b-instruct:free";
+    const model = req.body.model || "google/gemini-2.0-flash-exp:free";
     const provider = req.body.provider || { sort: 'latency' };
+    
+    console.log('=== POST /weather ===');
+    console.log('Ciudad:', city);
+    console.log('Modelo a usar:', model);
+    console.log('Enviando mensaje al LLM...');
 
-    // 5. Llamar al LLM
+    // 5. Llamar al LLM (con fallback automático integrado)
     const llmData = await sendToLLM(messages, model, provider);
     console.log('Respuesta del LLM:', JSON.stringify(llmData, null, 2));
 
-    // 6. Responder al cliente
-    let result = { model: model };
-    if (llmData.choices && llmData.choices[0] && llmData.choices[0].message && llmData.choices[0].message.content) {
-      result.content = llmData.choices[0].message.content;
-    } else {
-      result.data = llmData;
+    // 6. Validar respuesta del LLM
+    if (!llmData.choices || !llmData.choices[0] || !llmData.choices[0].message) {
+      console.error('Error: Estructura de respuesta del LLM inválida');
+      return res.status(500).json({ 
+        error: 'Respuesta de LLM con estructura inválida', 
+        data: llmData,
+        model: model 
+      });
     }
+    
+    const content = llmData.choices[0].message.content;
+    
+    // Validar que el contenido no esté vacío
+    if (!content || content.trim() === '') {
+      console.error('Error: Content vacío en la respuesta del LLM');
+      return res.status(500).json({ 
+        error: 'LLM devolvió un contenido vacío', 
+        fullResponse: llmData,
+        model: model 
+      });
+    }
+
+    // 7. Responder al cliente
+    let result = { model: model };
+    result.content = content;
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify({
       jsonrpc: '2.0',
