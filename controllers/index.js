@@ -126,11 +126,17 @@ async function sendToLLM(messages, model = "google/gemini-2.0-flash-thinking-exp
   // Lista de modelos de fallback que REALMENTE existen en OpenRouter
   const modelos = [
     model, // Intentar primero con el modelo solicitado
-    "google/gemini-2.0-flash-thinking-exp:free",
+    "stepfun/step-3.5-flash:free",
+    "arcee-ai/trinity-large-preview:free",
+    "liquid/lfm-2.5-1.2b-thinking:free",
+    "liquid/lfm-2.5-1.2b-instruct:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    /* "google/gemini-2.0-flash-thinking-exp:free",
     "google/gemma-2-9b-it:free",
     "meta-llama/llama-3.1-8b-instruct:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "huggingfaceh4/zephyr-7b-beta:free"
+    */
   ];
 
   // Remover duplicados
