@@ -50,6 +50,9 @@ app.use(express.json());
 // Usar rutas
 app.use('/api', routes);
 
-app.listen(port, () => {
-    console.log(`Servidor escuchando en http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Servidor escuchando en http://localhost:${port}`);
+    });
+}
+module.exports = app;
