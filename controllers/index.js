@@ -31,12 +31,12 @@ const postChat = async (req, res) => {
       ],
       'provider': body.provider || { 'sort': 'latency' }
     };
-    
+
     console.log('=== POST /chat ===');
     console.log('Authorization Bearer:', process.env.AUTHORIZATION_BEARER ? 'Presente' : 'FALTA');
     console.log('Modelo a usar:', requestBody.model);
     console.log('Payload enviado a OpenRouter:', JSON.stringify(requestBody, null, 2));
-    
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -47,39 +47,39 @@ const postChat = async (req, res) => {
       },
       body: JSON.stringify(requestBody)
     });
-    
+
     console.log('Status HTTP de OpenRouter:', response.status);
     console.log('Headers de respuesta:', {
       'content-type': response.headers.get('content-type'),
       'x-ratelimit-remaining': response.headers.get('x-ratelimit-remaining')
     });
-    
+
     const data = await response.json();
     console.log('Respuesta completa de OpenRouter:', JSON.stringify(data, null, 2));
     const usedModel = body.model || "mistralai/mistral-7b-instruct:free";
-    
+
     // Validar que la respuesta sea válida
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Error: Estructura de respuesta inválida', data);
-      return res.status(500).json({ 
-        error: 'Respuesta de OpenRouter con estructura inválida', 
-        data, 
-        model: usedModel 
+      return res.status(500).json({
+        error: 'Respuesta de OpenRouter con estructura inválida',
+        data,
+        model: usedModel
       });
     }
-    
+
     const content = data.choices[0].message.content;
-    
+
     // Validar que el contenido no esté vacío
     if (!content || content.trim() === '') {
       console.error('Error: Content vacío en la respuesta de OpenRouter');
-      return res.status(500).json({ 
-        error: 'OpenRouter devolvió un contenido vacío', 
+      return res.status(500).json({
+        error: 'OpenRouter devolvió un contenido vacío',
         fullResponse: data,
-        model: usedModel 
+        model: usedModel
       });
     }
-    
+
     const pretty = JSON.stringify({
       message: content,
       model: usedModel
@@ -104,14 +104,15 @@ async function sendToLLM(messages, model = "google/gemini-2.0-flash-exp:free", p
     "anthropic/claude-3.5-sonnet",
     "mistralai/mistral-7b-instruct:free"
   ];
-  
+
   // Remover duplicados
   const modelosUnicos = [...new Set(modelos)];
-  
+  let erroresAcumulados = [];
+
   for (const modeloActual of modelosUnicos) {
     try {
       console.log(`\n[sendToLLM] Intentando con modelo: ${modeloActual}`);
-      
+
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -126,39 +127,39 @@ async function sendToLLM(messages, model = "google/gemini-2.0-flash-exp:free", p
           provider
         })
       });
-      
+
       console.log(`[sendToLLM] Status HTTP: ${response.status}`);
-      
+
       const data = await response.json();
-      
+
       // Verificar si hay error de rate limit o estructura
       if (data.error) {
         console.log(`[sendToLLM] ❌ Error con ${modeloActual}:`, data.error.message || data.error.code);
-        console.log(`[sendToLLM] Detalles:`, JSON.stringify(data.error, null, 2));
+        erroresAcumulados.push({ status: response.status, openrouter_error: data.error });
         continue; // Intentar siguiente modelo
       }
-      
+
       // Verificar si la respuesta tiene contenido válido
       if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
         const content = data.choices[0].message.content.trim();
-        
+
         if (content && content !== '' && content !== ' ') {
           console.log(`[sendToLLM] ✓ Modelo ${modeloActual} respondió correctamente`);
-          console.log(`[sendToLLM] Contenido: ${content.substring(0, 100)}...`);
           return data;
         }
       }
-      
+
       console.log(`[sendToLLM] ⚠ Contenido vacío con ${modeloActual}, intentando siguiente...`);
-      
+      erroresAcumulados.push({ status: response.status, error: 'Empty content returned' });
+
     } catch (err) {
       console.log(`[sendToLLM] 🔴 Error de red con ${modeloActual}:`, err.message);
+      erroresAcumulados.push({ status: 'Network Error', error: err.message });
     }
   }
-  
-  // Si llegamos aquí, ningún modelo funcionó
-  console.error('[sendToLLM] ❌ Todos los modelos fallaron');
-  throw new Error('Ningún modelo LLM disponible funcionó correctamente');
+
+  // Si llegamos aquí, ningún modelo funcionó, arrojamos los detalles completos en el mensaje
+  throw new Error(`Detalles del rechazo de OpenRouter: ${JSON.stringify(erroresAcumulados)}`);
 }
 
 
@@ -187,21 +188,21 @@ const postWeather = async (req, res) => {
         id: 1
       })
     });
-    
+
     const text = await mcpResponse.text();
     console.log('[MCP] Respuesta cruda (primeros 500 caracteres):', text.substring(0, 500));
-    
+
     // Parsear la respuesta y extraer el texto meteorológico
     let datosMeteorologicos = '';
     try {
       const dataLines = text.split('\n').filter(line => line.startsWith('data: '));
       console.log('[MCP] Líneas con "data:":', dataLines.length);
-      
+
       if (dataLines.length > 0) {
         const lastData = dataLines[dataLines.length - 1].replace('data: ', '');
         const data = JSON.parse(lastData);
         console.log('[MCP] Estructura parsed:', JSON.stringify(data, null, 2).substring(0, 300));
-        
+
         // Buscar la propiedad text en la estructura result.content[0].text
         if (
           data.result &&
@@ -212,7 +213,7 @@ const postWeather = async (req, res) => {
         ) {
           // El text puede ser un string o un objeto
           let textContent = data.result.content[0].text;
-          
+
           // Si es un string que parece JSON, parsearlo
           if (typeof textContent === 'string') {
             try {
@@ -222,10 +223,10 @@ const postWeather = async (req, res) => {
               console.log('[MCP] Text es un string (no JSON)');
             }
           }
-          
+
           // Convertir a string legible
-          datosMeteorologicos = typeof textContent === 'string' 
-            ? textContent 
+          datosMeteorologicos = typeof textContent === 'string'
+            ? textContent
             : JSON.stringify(textContent, null, 2);
           console.log('[MCP] ✓ Datos meteorológicos extraídos correctamente');
         } else {
@@ -283,7 +284,7 @@ const postWeather = async (req, res) => {
     // 4. Usar el mismo modelo que postChat
     const model = req.body.model || "google/gemini-2.0-flash-exp:free";
     const provider = req.body.provider || { sort: 'latency' };
-    
+
     console.log('=== POST /weather ===');
     console.log('Ciudad:', city);
     console.log('Modelo a usar:', model);
@@ -296,22 +297,22 @@ const postWeather = async (req, res) => {
     // 6. Validar respuesta del LLM
     if (!llmData.choices || !llmData.choices[0] || !llmData.choices[0].message) {
       console.error('Error: Estructura de respuesta del LLM inválida');
-      return res.status(500).json({ 
-        error: 'Respuesta de LLM con estructura inválida', 
+      return res.status(500).json({
+        error: 'Respuesta de LLM con estructura inválida',
         data: llmData,
-        model: model 
+        model: model
       });
     }
-    
+
     const content = llmData.choices[0].message.content;
-    
+
     // Validar que el contenido no esté vacío
     if (!content || content.trim() === '') {
       console.error('Error: Content vacío en la respuesta del LLM');
-      return res.status(500).json({ 
-        error: 'LLM devolvió un contenido vacío', 
+      return res.status(500).json({
+        error: 'LLM devolvió un contenido vacío',
         fullResponse: llmData,
-        model: model 
+        model: model
       });
     }
 
