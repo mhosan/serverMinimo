@@ -25,7 +25,7 @@ const postChat = async (req, res) => {
   const body = req.body || {};
   try {
     const requestBody = {
-      "model": body.model || "google/gemini-2.0-flash-exp:free",
+      "model": body.model || "google/gemini-2.0-flash-lite-preview-02-05:free",
       "messages": body.messages || [
         { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" }
       ],
@@ -95,14 +95,14 @@ exports.postChat = postChat;
 
 
 // Función auxiliar para enviar mensajes al LLM (OpenRouter) con fallback automático
-async function sendToLLM(messages, model = "google/gemini-2.0-flash-exp:free", provider = { sort: 'latency' }) {
+async function sendToLLM(messages, model = "google/gemini-2.0-flash-lite-preview-02-05:free", provider = { sort: 'latency' }) {
   // Lista de modelos de fallback que REALMENTE existen en OpenRouter
   const modelos = [
     model, // Intentar primero con el modelo solicitado
-    "google/gemini-2.0-flash-exp:free",
-    "openai/gpt-4o-mini",
-    "anthropic/claude-3.5-sonnet",
-    "mistralai/mistral-7b-instruct:free"
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "google/gemini-2.0-pro-exp-02-05:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "qwen/qwen-2.5-coder-32b-instruct:free"
   ];
 
   // Remover duplicados
@@ -282,7 +282,7 @@ const postWeather = async (req, res) => {
       { role: "user", content: `Dame un resumen del pronóstico del tiempo de ${city} con estos datos: ${datosMeteorologicos}` }
     ];
     // 4. Usar el mismo modelo que postChat
-    const model = req.body.model || "google/gemini-2.0-flash-exp:free";
+    const model = req.body.model || "google/gemini-2.0-flash-lite-preview-02-05:free";
     const provider = req.body.provider || { sort: 'latency' };
 
     console.log('=== POST /weather ===');
