@@ -21,11 +21,38 @@ exports.postText = (req, res) => {
 
 
 // POST /chat
+/* cb-445f7fa06b73openrouter/free
+stepfun/step-3.5-flash:free
+arcee-ai/trinity-large-preview:free
+liquid/lfm-2.5-1.2b-thinking:free
+liquid/lfm-2.5-1.2b-instruct:free
+nvidia/nemotron-3-nano-30b-a3b:free
+arcee-ai/trinity-mini:free
+nvidia/nemotron-nano-12b-v2-vl:free
+qwen/qwen3-vl-30b-a3b-thinking
+qwen/qwen3-vl-235b-a22b-thinking
+qwen/qwen3-next-80b-a3b-instruct:free
+nvidia/nemotron-nano-9b-v2:free
+openai/gpt-oss-120b:free
+openai/gpt-oss-20b:free
+z-ai/glm-4.5-air:free
+qwen/qwen3-coder:free
+cognitivecomputations/dolphin-mistral-24b-venice-edition:free
+google/gemma-3n-e2b-it:free
+google/gemma-3n-e4b-it:free
+qwen/qwen3-4b:free
+mistralai/mistral-small-3.1-24b-instruct:free
+google/gemma-3-4b-it:free
+google/gemma-3-12b-it:free
+google/gemma-3-27b-it:free
+meta-llama/llama-3.3-70b-instruct:free
+meta-llama/llama-3.2-3b-instruct:free
+nousresearch/hermes-3-llama-3.1-405b:free */
 const postChat = async (req, res) => {
   const body = req.body || {};
   try {
     const requestBody = {
-      "model": body.model || "google/gemini-2.0-flash-lite-preview-02-05:free",
+      "model": body.model || "nousresearch/hermes-3-llama-3.1-405b:free",
       "messages": body.messages || [
         { role: "user", content: "¿Cuantos términos tiene la serie de Fibonacci?" }
       ],
@@ -95,14 +122,15 @@ exports.postChat = postChat;
 
 
 // Función auxiliar para enviar mensajes al LLM (OpenRouter) con fallback automático
-async function sendToLLM(messages, model = "google/gemini-2.0-flash-lite-preview-02-05:free", provider = { sort: 'latency' }) {
+async function sendToLLM(messages, model = "google/gemini-2.0-flash-thinking-exp:free", provider = { sort: 'latency' }) {
   // Lista de modelos de fallback que REALMENTE existen en OpenRouter
   const modelos = [
     model, // Intentar primero con el modelo solicitado
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "google/gemini-2.0-pro-exp-02-05:free",
+    "google/gemini-2.0-flash-thinking-exp:free",
+    "google/gemma-2-9b-it:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "qwen/qwen-2.5-coder-32b-instruct:free"
+    "huggingfaceh4/zephyr-7b-beta:free"
   ];
 
   // Remover duplicados
@@ -282,7 +310,7 @@ const postWeather = async (req, res) => {
       { role: "user", content: `Dame un resumen del pronóstico del tiempo de ${city} con estos datos: ${datosMeteorologicos}` }
     ];
     // 4. Usar el mismo modelo que postChat
-    const model = req.body.model || "google/gemini-2.0-flash-lite-preview-02-05:free";
+    const model = req.body.model || "google/gemini-2.0-flash-thinking-exp:free";
     const provider = req.body.provider || { sort: 'latency' };
 
     console.log('=== POST /weather ===');
