@@ -1,24 +1,34 @@
 // Reemplazo de import ESM por función compatible con require/CommonJS
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
-// controllers/index.js
 
-// GET /
-exports.getWelcome = (req, res) => {
+/**
+ * GET 
+ * @param {*} _req 
+ * @param {*} res 
+ */
+exports.getWelcome = (_req, res) => {
   res.send('Hola soy un get');
 };
 
-// GET /json
-exports.getJson = (req, res) => {
+/**
+ * GET de prueba para verificar que el servidor puede devolver respuestas en formato JSON. Devuelve un objeto con un mensaje y un tipo, sin lógica adicional.
+ * @param {} _req 
+ * @param {*} res 
+ */
+exports.getJson = (_req, res) => {
   res.json({ mensaje: 'Hola soy un get en formato JSON', tipo: 'JSON' });
 };
 
-// POST /
+/**
+ * POST de prueba para verificar que el servidor puede recibir datos en el cuerpo de la solicitud y devolverlos. Devuelve exactamente el texto recibido en el campo "texto" del cuerpo, sin lógica adicional.
+ * @param {*} req 
+ * @param {*} res 
+ */
 exports.postText = (req, res) => {
   const { texto } = req.body;
   res.send(texto);
 };
-
 
 // POST /chat
 /* cb-445f7fa06b73openrouter/free
@@ -48,6 +58,17 @@ google/gemma-3-27b-it:free
 meta-llama/llama-3.3-70b-instruct:free
 meta-llama/llama-3.2-3b-instruct:free
 nousresearch/hermes-3-llama-3.1-405b:free */
+
+
+/**
+ * POST
+ * Recibe un cuerpo con un modelo, mensajes y provider opcionales, hace una solicitud a OpenRouter para obtener una respuesta del LLM,
+ * valida la respuesta y la devuelve al cliente. Si el modelo especificado no funciona, intenta con una lista de modelos de fallback. 
+ * Si ningún modelo funciona, devuelve un error detallado con los intentos realizados.
+ * @param {*} req 
+ * @param {*} res 
+ * @returns 
+ */
 const postChat = async (req, res) => {
   const body = req.body || {};
   try {
@@ -118,7 +139,7 @@ const postChat = async (req, res) => {
   }
 };
 exports.postChat = postChat;
-// POST /chat
+
 
 
 // Función auxiliar para enviar mensajes al LLM (OpenRouter) con fallback automático
@@ -368,11 +389,11 @@ exports.postWeather = postWeather;
 
 
 // PUT /
-exports.putWelcome = (req, res) => {
+exports.putWelcome = (_req, res) => {
   res.send('Hola, soy un put');
 };
 
 // DELETE /
-exports.deleteWelcome = (req, res) => {
+exports.deleteWelcome = (_req, res) => {
   res.send('Hola soy un delete');
 };

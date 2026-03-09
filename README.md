@@ -1,19 +1,18 @@
 # Servidor Mínimo Node.js
 ## Utilizado en DatoUrbano.
 Hosting
-El hosteo es en render.com, logearse en Render con la cuenta de Google. Entra en modo sleep si no hay actividad.
+El hosteo es en vercel, logearse en Vercel con la cuenta de Google. Conectarse por GitHub, Gmail y eMail.
 
-Funcionalidad
-Post /chat para usar Openrouter para acceder a un modelo LLM del listado.
+## Funcionalidad
+- Post /chat para usar Openrouter para acceder a un modelo LLM del listado.
 Si no se selecciona ninguno se usa por default mistralai/mistral-7b-instruct:free.
 Permite ingresar una pregunta y recibir una respuesta.
 Si no se ingresa ninguna pregunta usa una por default: "Cuantos términos tiene la serie de Fibonacci"
-## Descripción
 
+## Descripción
 Este es un servidor básico construido con Node.js y Express. Sirve como punto de partida para crear APIs REST, incluyendo funcionalidades como logging, gestión de variables de entorno, documentación de API con Swagger y ejemplos de integración con servicios externos.
 
 ## Características
-
 - **Framework**: Express.js
 - **Logging**: `morgan` para registrar las peticiones HTTP en la consola.
 - **Variables de Entorno**: `dotenv` para gestionar la configuración en diferentes entornos (desarrollo/producción).
@@ -26,78 +25,62 @@ Este es un servidor básico construido con Node.js y Express. Sirve como punto d
 - **Estructura mejorada**: Separación clara entre rutas y controladores siguiendo mejores prácticas de Express
 
 ## Prerrequisitos
-
 - Node.js (v14 o superior)
 - npm
 
-Antes de iniciar, es necesario crear un archivo de configuración para las variables de entorno.
-
-1.  Cree un archivo llamado `.env.development` en la raíz del proyecto.
-2.  Añada la siguiente variable, reemplazando `TU_API_KEY` con su clave de API de OpenRouter:
+## Es necesario crear un archivo de configuración para las variables de entorno.
+1.  Crear un archivo llamado `.env.development` en la raíz del proyecto.
+2.  Añadir la siguiente variable: `AUTHORIZATION_BEARER`, con la clave API-KEY de OpenRouter:
 
     ```
     AUTHORIZATION_BEARER=TU_API_KEY
     ```
 
 ## Instalación
-
-Clone el repositorio e instale las dependencias ejecutando el siguiente comando en la raíz del proyecto:
+Clonar el repositorio e instalar las dependencias ejecutando el siguiente comando en la raíz del proyecto:
 
 ```bash
 npm install
 ```
 
-Este comando es un alias para `npm install`, tal como se define en `package.json`.
-
 ## Uso
 
 ### Modo de Desarrollo
-
 Para iniciar el servidor en modo de desarrollo con recarga automática (usando `nodemon`):
-
 ```bash
 npm run dev
 ```
-
 El servidor estará disponible en `http://localhost:4000`.
 
 ### Modo de Producción
-
 Para iniciar el servidor en modo de producción:
-
 ```bash
 npm start
 ```
 
 ## Características Principales
-
 ### Endpoint `/api/chat` - Chat con Modelo LLM
-
 **Descripción**: Envía un mensaje a un modelo de lenguaje mediante OpenRouter con fallback automático.
-
 **Características**:
 - Sistema de fallback automático: Si un modelo está limitado o falla, intenta automáticamente con otros modelos
 - Modelos disponibles: Google Gemini 2.0 Flash, OpenAI GPT-4o Mini, Anthropic Claude 3.5 Sonnet, Mistral 7B
 - Validación robusta de respuestas
 - Logs detallados para depuración
-
 **Flujo**:
 1. Cliente envía mensaje → `/api/chat`
 2. Backend intenta con el modelo solicitado
 3. Si falla o está limitado, intenta con modelos alternativos
 4. Devuelve la respuesta del primer modelo que funcione
 
+
 ### Endpoint `/api/weather` - Pronóstico del Tiempo
-
 **Descripción**: Obtiene el pronóstico del tiempo para una ciudad y genera un resumen en lenguaje natural usando un modelo LLM.
-
 **Características**:
 - Integración con MCP (Model Context Protocol) para obtener datos meteorológicos
 - Extracción inteligente de datos (soporta múltiples formatos)
 - Procesamiento y transformación de datos en formato legible
 - Generación de resumen natural mediante LLM
 - Sistema de fallback automático de modelos
-
 **Flujo**:
 1. Cliente → POST `/api/weather` con nombre de ciudad
 2. Backend → Llamada al MCP para obtener datos meteorológicos
@@ -105,7 +88,6 @@ npm start
 4. Backend → Envía datos al LLM con instrucción clara
 5. LLM → Genera resumen natural del pronóstico
 6. Backend → Devuelve resumen en formato JSON-RPC 2.0
-
 **Ejemplo de respuesta**:
 ```json
 {
@@ -140,7 +122,6 @@ npm start
 - **`controllers/index.js`**: Contiene la lógica para cada ruta. Se encarga de procesar las peticiones, interactuar con servicios externos y enviar las respuestas.
 
 ## API Endpoints
-
 La documentación completa e interactiva de la API está disponible en la ruta `/api-docs` una vez que el servidor está en funcionamiento.
 
 A continuación se resumen los endpoints disponibles:
