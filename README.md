@@ -57,13 +57,13 @@ Para iniciar el servidor en modo de producción:
 ```bash
 npm start
 ```
+El servidor estará disponible en `https://serverminimo.onrender.com/`
 
 ## Características Principales
-### Endpoint `/api/chat` - Chat con Modelo LLM
+### Endpoint `/api/chat` - Chatear con un modelo LLM
 **Descripción**: Envía un mensaje a un modelo de lenguaje mediante OpenRouter con fallback automático.
 **Características**:
 - Sistema de fallback automático: Si un modelo está limitado o falla, intenta automáticamente con otros modelos
-- Modelos disponibles: Google Gemini 2.0 Flash, OpenAI GPT-4o Mini, Anthropic Claude 3.5 Sonnet, Mistral 7B
 - Validación robusta de respuestas
 - Logs detallados para depuración
 **Flujo**:
@@ -71,7 +71,6 @@ npm start
 2. Backend intenta con el modelo solicitado
 3. Si falla o está limitado, intenta con modelos alternativos
 4. Devuelve la respuesta del primer modelo que funcione
-
 
 ### Endpoint `/api/weather` - Pronóstico del Tiempo
 **Descripción**: Obtiene el pronóstico del tiempo para una ciudad y genera un resumen en lenguaje natural usando un modelo LLM.
@@ -82,12 +81,12 @@ npm start
 - Generación de resumen natural mediante LLM
 - Sistema de fallback automático de modelos
 **Flujo**:
-1. Cliente → POST `/api/weather` con nombre de ciudad
-2. Backend → Llamada al MCP para obtener datos meteorológicos
-3. Backend → Extrae y parsea datos (latitud, longitud, temperatura actual, pronóstico horario, etc.)
-4. Backend → Envía datos al LLM con instrucción clara
-5. LLM → Genera resumen natural del pronóstico
-6. Backend → Devuelve resumen en formato JSON-RPC 2.0
+1. Cliente → POST `/api/weather` con nombre de ciudad en el body del request
+2. Backend (este server) → Llamada al MCP para obtener datos meteorológicos
+3. Backend (este server) → Extrae y parsea datos (latitud, longitud, temperatura actual, pronóstico horario, etc.)
+4. Backend (este server) → Envía datos al LLM con instrucción clara de generar un resumen en lenguaje natural
+5. LLM → Genera resumen natural del pronóstico y lo devuelve al backend
+6. Backend (este server) → Devuelve resumen en formato JSON-RPC 2.0 al cliente que solicito el pronóstico en el paso 1
 **Ejemplo de respuesta**:
 ```json
 {
@@ -101,7 +100,6 @@ npm start
 ```
 
 ## Estructura del Proyecto
-
 ```
 .
 ├── controllers/
@@ -116,7 +114,6 @@ npm start
 ├── package.json
 └── README.md
 ```
-
 - **`index.js`**: El archivo principal que inicializa el servidor Express, configura los middlewares (CORS, Morgan, Swagger) y define el puerto de escucha.
 - **`routes/index.js`**: Centraliza todas las rutas de la API. Importa los controladores y los asigna a endpoints específicos. Todas las rutas definidas aquí tienen el prefijo `/api`.
 - **`controllers/index.js`**: Contiene la lógica para cada ruta. Se encarga de procesar las peticiones, interactuar con servicios externos y enviar las respuestas.
@@ -125,7 +122,6 @@ npm start
 La documentación completa e interactiva de la API está disponible en la ruta `/api-docs` una vez que el servidor está en funcionamiento.
 
 A continuación se resumen los endpoints disponibles:
-
 - **`GET /api/`**
   - **Descripción**: Devuelve un mensaje de bienvenida simple.
   - **Respuesta**: `Hola soy un get`
@@ -179,7 +175,7 @@ A continuación se resumen los endpoints disponibles:
     }
     ```
   - **Flujo interno**:
-    1. Obtiene datos meteorológicos desde MCP
+    1. Obtiene datos meteorológicos desde MCP (hosteado en Vercel)
     2. Extrae información: ubicación, temperatura actual, pronóstico horario
     3. Envía los datos a un modelo LLM
     4. El LLM genera un resumen en lenguaje natural
