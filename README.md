@@ -57,7 +57,7 @@ Para iniciar el servidor en modo de producción:
 ```bash
 npm start
 ```
-El servidor estará disponible en `https://serverminimo.onrender.com/`
+El servidor estará disponible en `https://server-minimo.vercel.app/api/`
 
 ## Características Principales
 ### Endpoint `/api/chat` - Chatear con un modelo LLM

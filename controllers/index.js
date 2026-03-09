@@ -2,29 +2,30 @@
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 
-/**
+/*************************************************
  * GET 
  * @param {*} _req 
  * @param {*} res 
- */
+ ************************************************/
 exports.getWelcome = (_req, res) => {
   res.send('Hola soy un get');
 };
 
-/**
+
+/*************************************************
  * GET de prueba para verificar que el servidor puede devolver respuestas en formato JSON. Devuelve un objeto con un mensaje y un tipo, sin lógica adicional.
  * @param {} _req 
  * @param {*} res 
- */
+ *************************************************/
 exports.getJson = (_req, res) => {
   res.json({ mensaje: 'Hola soy un get en formato JSON', tipo: 'JSON' });
 };
 
-/**
+/*************************************************
  * POST de prueba para verificar que el servidor puede recibir datos en el cuerpo de la solicitud y devolverlos. Devuelve exactamente el texto recibido en el campo "texto" del cuerpo, sin lógica adicional.
  * @param {*} req 
  * @param {*} res 
- */
+ *************************************************/
 exports.postText = (req, res) => {
   const { texto } = req.body;
   res.send(texto);
@@ -60,7 +61,7 @@ meta-llama/llama-3.2-3b-instruct:free
 nousresearch/hermes-3-llama-3.1-405b:free */
 
 
-/**
+/***************************************************
  * POST
  * Recibe un cuerpo con un modelo, mensajes y provider opcionales, hace una solicitud a OpenRouter para obtener una respuesta del LLM,
  * valida la respuesta y la devuelve al cliente. Si el modelo especificado no funciona, intenta con una lista de modelos de fallback. 
@@ -68,7 +69,7 @@ nousresearch/hermes-3-llama-3.1-405b:free */
  * @param {*} req 
  * @param {*} res 
  * @returns 
- */
+ ***************************************************/
 const postChat = async (req, res) => {
   const body = req.body || {};
   try {
@@ -218,13 +219,21 @@ async function sendToLLM(messages, model = "google/gemini-2.0-flash-thinking-exp
 }
 
 
-// POST /weather
+/******************************************************************
+ * POST toma como parametro un nombre de ciudad, hace una solicitud al MCP para obtener datos meteorológicos de esa ciudad, 
+ * luego envía esos datos a un LLM para obtener un resumen del pronóstico del tiempo en lenguaje natural, y finalmente 
+ * devuelve ese resumen al cliente. Si ocurre algún error en el proceso, devuelve un mensaje de error detallado.
+ * @param {*} req 
+ * @param {*} res 
+ * @returns 
+ ******************************************************************/
 const postWeather = async (req, res) => {
 
   const { city } = req.body;
   if (!city) {
-    return res.status(400).json({ error: 'City is required in the request body.' });
+    return res.status(400).json({ error: 'La ciudad es requerida en el cuerpo de la solicitud.' });
   }
+
   try {
     // 1. Llamar al MCP
     const mcpResponse = await fetch('https://mcpserver-hazel.vercel.app/api', {
@@ -243,7 +252,6 @@ const postWeather = async (req, res) => {
         id: 1
       })
     });
-
     const text = await mcpResponse.text();
     console.log('[MCP] Respuesta cruda (primeros 500 caracteres):', text.substring(0, 500));
 
